@@ -14,7 +14,7 @@ Welcome to the Music Composition Web App! This project enables users to create, 
 ### 1. Writing Your Music Code
 - Use the code editor to write your musical instructions. Example code:
 
-    
+    ```plaintext
     setTempo(120)
     chord Am minor 1m
     chord Em minor 1m
@@ -40,9 +40,10 @@ Welcome to the Music Composition Web App! This project enables users to create, 
 ## Example Code Snippets
 
 ### Basic Chord Progression
-
+```plaintext
 setTempo(120)
 chord Am minor 1m
 chord Em minor 1m
 chord F major 1m
 chord C major 1m
+
