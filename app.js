@@ -30,7 +30,8 @@ require(['vs/editor/editor.main'], function() {
 // Function to parse and play code using Tone.js
 function parseAndPlay(input) {
     console.log("Parsing code and playing...");
-    const synth = new Tone.Synth().toDestination(); // Single synth for testing
+    const melodySynth = new Tone.Synth().toDestination();
+    const bassSynth = new Tone.Synth().toDestination();
     const commands = input.split('\n');
     Tone.Transport.bpm.value = 120; // Default tempo
 
@@ -46,18 +47,24 @@ function parseAndPlay(input) {
             if (note && duration) {
                 const delay = Tone.Time(duration).toSeconds() * index;
                 Tone.Transport.schedule(() => {
-                    console.log("Playing note:", note, "for duration:", duration);
-                    synth.triggerAttackRelease(note, duration);
+                    console.log("Playing melody note:", note, "for duration:", duration);
+                    melodySynth.triggerAttackRelease(note, duration);
                 }, `+${delay}`);
             }
-        } else if (command.startsWith('rest')) {
-            // Placeholder for rest duration; no sound is played.
-            console.log("Rest for duration:", command.split(' ')[1]);
         }
     });
 
+    // Add a simple test for the bass line separately
+    Tone.Transport.schedule(() => {
+        console.log("Playing bass note: C2 for duration: 1/4");
+        bassSynth.triggerAttackRelease("C2", "1/4");
+    }, "+1.0"); // Scheduled after 1 second for testing
+
     // Start the transport
-    Tone.Transport.start("+0.1"); // Add a slight delay to ensure timing
+    Tone.Transport.start("+0.1");
 }
+
+
+
 
 
