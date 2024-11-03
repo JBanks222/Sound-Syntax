@@ -5,7 +5,7 @@ require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-e
 require(['vs/editor/editor.main'], function() {
     console.log("Monaco Editor loaded.");
     const editor = monaco.editor.create(document.getElementById('editor'), {
-        value: `setTempo(120)\ntrack1 {\n    C4 1/4, D4 1/8, E4 1/4, rest 1/8\n}`,
+        value: `setTempo(120)\nchord Am minor 1m\nchord Em minor 1m\nchord F major 1m\nchord C major 1m\n`,
         language: 'javascript',
         theme: 'vs-dark'
     });
@@ -27,11 +27,38 @@ require(['vs/editor/editor.main'], function() {
     });
 });
 
-// Function to parse and play code using Tone.js
-function parseAndPlay(input) {
+// Initialize Tone.js and Web Audio components
+const melodySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+const bassSynth = new Tone.Synth().toDestination();
+
+// Create an OfflineAudioContext for recording
+const context = Tone.context;
+let recorder;
+let recordedChunks = [];
+let downloadUrl = '';
+
+// Function to parse, play, and record audio
+async function parseAndPlay(input) {
     console.log("Parsing code and playing...");
-    const melodySynth = new Tone.PolySynth(Tone.Synth).toDestination(); // PolySynth for chords
-    const bassSynth = new Tone.Synth().toDestination(); // Bass synth for bassline
+
+    // Reset recorded chunks
+    recordedChunks = [];
+
+    // Create a MediaStreamDestination to record the audio
+    const destination = context.createMediaStreamDestination();
+    melodySynth.connect(destination);
+    bassSynth.connect(destination);
+
+    // Create a MediaRecorder to capture the stream
+    recorder = new MediaRecorder(destination.stream);
+    recorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+
+    recorder.onstop = exportWav;
+
     const commands = input.split('\n');
     Tone.Transport.bpm.value = 120; // Default tempo
 
@@ -81,9 +108,43 @@ function parseAndPlay(input) {
         }
     });
 
-    // Start the transport
+    // Start recording
+    recorder.start();
+
+    // Start the transport and stop it after the audio is complete
     Tone.Transport.start("+0.1"); // Add a slight delay to ensure timing
+    Tone.Transport.scheduleOnce(() => {
+        Tone.Transport.stop();
+        recorder.stop();
+    }, `+${currentMeasure * Tone.Time('1m').toSeconds()}`); // Stop after all measures
 }
+
+// Function to export recorded audio to a .wav file
+function exportWav() {
+    const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+    downloadUrl = URL.createObjectURL(blob);
+    const downloadButton = document.getElementById('download-audio');
+    downloadButton.href = downloadUrl;
+    downloadButton.download = 'output.wav';
+    downloadButton.disabled = false; // Enable the button for user download
+    console.log("Audio ready for download.");
+}
+// Add an event listener for the download button
+document.getElementById('download-audio').addEventListener('click', () => {
+    if (downloadUrl) {
+        // Create an anchor element for download
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = 'output.wav';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        console.log("Download started.");
+    } else {
+        console.error("No audio URL found. Please generate audio first.");
+    }
+});
 
 // Helper function to generate notes for common chords
 function generateChordNotes(root, type) {
@@ -131,10 +192,3 @@ function transposeNoteBySemitones(pitch, octave, semitones) {
 
     return `${noteOrder[newIndex]}${newOctave}`;
 }
-
-
-
-
-
-
-
